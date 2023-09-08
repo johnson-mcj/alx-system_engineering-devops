@@ -1,63 +1,16 @@
-#!/usr/bin/env bash
-# Script to configure domain zone and audit subdomains
+#!/usr/bin/env bash 
+# Display information about subdomains.
 
-# Function to configure domain zone
-configure_domain_zone() {
-  local domain="$1"
-  local lb_ip="$2"
-  local web01_ip="$3"
-  local web02_ip="$4"
-
-  # Configure subdomains
-  echo "Configuring subdomains for $domain..."
-  echo "www.$domain. IN A $lb_ip" >> /etc/bind/db.$domain
-  echo "lb-01.$domain. IN A $lb_ip" >> /etc/bind/db.$domain
-  echo "web-01.$domain. IN A $web01_ip" >> /etc/bind/db.$domain
-  echo "web-02.$domain. IN A $web02_ip" >> /etc/bind/db.$domain
-
-  # Reload DNS service
-  systemctl reload bind9
-
-  echo "Domain zone configuration completed."
+subdomaininfo () {
+    dig "$1" | grep -A1 'ANSWER SECTION:' | tail -n 1 | sed -r "s/$1./$2/g" | sed -r "s/ /\t/g" | sed -r "s/\t/ /g" | awk '{ print "The subdomain " $1 " is a " $4 " record and points to "  $5 }'
 }
 
-# Function to display DNS information for a subdomain
-display_dns_info() {
-  local domain="$1"
-  local subdomain="$2"
-
-  # Use dig to fetch DNS information and awk to parse it
-  dns_info=$(dig "$subdomain.$domain" | awk '/ANSWER SECTION/ { getline; print }')
-
-  # Extract the record type and destination IP from the dig output
-  record_type=$(echo "$dns_info" | awk '{print $4}')
-  destination=$(echo "$dns_info" | awk '{print $5}')
-
-  # Display the information
-  echo "The subdomain $subdomain is a $record_type record and points to $destination"
-}
-
-# Main script
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "Usage: $0 <domain> [subdomain]"
-  exit 1
-fi
-
-domain="$1"
-lb_ip="lb-01-IP"  # Replace with your actual lb-01 IP address
-web01_ip="web-01-IP"  # Replace with your actual web-01 IP address
-web02_ip="web-02-IP"  # Replace with your actual web-02 IP address
-
-if [ -n "$2" ]; then
-  display_dns_info "$domain" "$2"
+if [ "$#" -eq 2 ]
+then
+    subdomaininfo "$2.$1" "$2"
 else
-  configure_domain_zone "$domain" "$lb_ip" "$web01_ip" "$web02_ip"
-
-  # List of subdomains to audit
-  subdomains=("www" "lb-01" "web-01" "web-02")
-
-  # Loop through the predefined subdomains and fetch/display DNS information for each
-  for sub in "${subdomains[@]}"; do
-    display_dns_info "$domain" "$sub"
-  done
+    subdomaininfo "www.$1" "www"
+    subdomaininfo "lb-01.$1" "lb-01"
+    subdomaininfo "web-01.$1" "web-01"
+    subdomaininfo "web-02.$1" "web-02"
 fi
