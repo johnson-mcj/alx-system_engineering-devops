@@ -35,6 +35,3 @@ Let’s also add other subdomains to make our life easier, and write a Bash scri
 * A good habit is to enforce HTTPS traffic so that no unencrypted traffic is possible. Configure HAproxy to automatically redirect HTTP traffic to HTTPS.
 
 ---
-
-## Author
-* **Arturo Victoria Rincon** - [arvicrin](https://github.com/arvicrin)
